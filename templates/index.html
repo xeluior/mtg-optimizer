@@ -13,8 +13,32 @@
     >
     <!-- End Bootstrap CSS -->
   </head>
-  <body>
-    <main>
+  <body data-bs-theme="dark">
+    <main class="container">
+        <form method="POST" enctype="multipart/form-data">
+            <label for="decklist" class="form-label">Deck List</label>
+            <textarea
+                id="decklist"
+                name="decklist"
+                class="form-control"
+                rows=10
+            ></textarea>
+            <input class="form-control" type="file" id="decklistFile">
+            <div class="form-check">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    value=""
+                    name="ignoreLands"
+                    id="ignoreLands"
+                >
+                <label class="form-check-label" for="ignoreLands">
+                    Ignore Basic Lands
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+        <result id="results"></result>
     </main>
     <!-- Bootstrap JS -->
     <script
