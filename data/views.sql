@@ -1,83 +1,97 @@
-/* Total weight of all the cards on a sheet */
-drop table if exists setBoosterSheetWeight;
-create table setBoosterSheetWeight as
+/* Total card weights for each sheet */
+drop table if exists setBoosterSheetCardWeightTotals;
+create table setBoosterSheetCardWeightTotals as
 select boosterName,
   setCode,
   sheetName,
-  sum(cardWeight) as sheetWeight
+  sum(cardWeight) as totalWeight
 from setBoosterSheetCards
 group by boosterName, setCode, sheetName;
 
-/* Probability of a card on a particular sheet */
-drop table setBoosterSheetCardProbability;
+/* P(card(uuid) in sheet(boosterName, setCode, sheetName)) */
+drop table if exists setBoosterSheetCardProbability;
 create table setBoosterSheetCardProbability as
 select a.boosterName,
-  a.cardUuid,
   a.setCode,
   a.sheetName,
-  cast(a.cardWeight as real) / b.sheetWeight as cardProbability
+  a.cardUuid,
+  cast(a.cardWeight as real) / b.totalWeight as cardProbability
 from setBoosterSheetCards a
-join setBoosterSheetWeight b
+join setBoosterSheetCardWeightTotals b
 on a.boosterName = b.boosterName
 and a.setCode = b.setCode
 and a.sheetName = b.sheetName;
 
-/* Probability of a card on a sheet in a booster index */
-drop table setBoosterContentSheetCardProbability;
-create table setBoosterContentSheetCardProbability as
+/* Total sheetPicks in booster(index, nmae, set) */
+drop table if exists setBoosterSheetPicksTotal;
+create table setBoosterSheetPicksTotal as
+select boosterIndex,
+  boosterName,
+  setCode,
+  sum(sheetPicks) as totalPicks
+from setBoosterContents
+group by boosterIndex, boosterName, setCode;
+
+/* P(sheet(name) in booster(index, name, set)) */
+drop table if exists setBoosterSheetPicksProbability;
+create table setBoosterSheetPicksProbability as
 select a.boosterIndex,
   a.boosterName,
   a.setCode,
   a.sheetName,
-  b.cardUuid,
-  b.cardProbability * a.sheetPicks as cardProbability
+  cast(a.sheetPicks as real) / b.totalPicks as sheetProbability
 from setBoosterContents a
+join setBoosterSheetPicksTotal b
+on a.boosterIndex = b.boosterIndex
+and a.boosterName = b.boosterName
+and a.setCode = b.setCode;
+
+/* P(card(uuid) in booster(index, name, set)) */
+drop table if exists setBoosterContentCardProbability;
+create table setBoosterContentCardProbability as
+select a.boosterIndex,
+  a.boosterName,
+  a.setCode,
+  b.cardUuid,
+  sum(a.sheetProbability * b.cardProbability) as cardProbability
+from setBoosterSheetPicksProbability a
 join setBoosterSheetCardProbability b
 on a.boosterName = b.boosterName
 and a.setCode = b.setCode
-and a.sheetName = b.sheetName;
+and a.sheetName = b.sheetName
+group by a.boosterIndex, a.boosterName, a.setCode, b.cardUuid;
 
-/* Total probability of a card on any sheet in a booster index */
-drop table setBoosterContentCardProbability;
-create table setBoosterContentCardProbability as
-select boosterIndex,
-  boosterName,
-  setCode,
-  cardUuid,
-  sum(cardProbability) as cardProbability
-from setBoosterContentSheetCardProbability
-group by boosterIndex, boosterName, setCode, cardUuid;
-
-/* Total weight of all indexes for a booster name */
-drop table setBoosterWeights;
-create table setBoosterWeights as
+/* Total boosterWeights in booster(name, set) */
+drop table if exists setBoosterContentWeightTotal;
+create table setBoosterContentWeightTotal as
 select boosterName,
   setCode,
-  sum(boosterWeight) as setWeight
+  sum(boosterWeight) as totalWeight
 from setBoosterContentWeights
 group by boosterName, setCode;
 
-/* Probability of a particular booster index in a name */
-drop table setBoosterContentProbability;
+/* P(booster(index, name, set) in booster(name, set)) */
+drop table if exists setBoosterContentProbability;
 create table setBoosterContentProbability as
 select a.boosterIndex,
   a.boosterName,
   a.setCode,
-  cast(a.boosterWeight as real) / b.setWeight as boosterProbability
+  cast(a.boosterWeight as real) / b.totalWeight as contentProbability
 from setBoosterContentWeights a
-join setBoosterWeights b
+join setBoosterContentWeightTotal b
 on a.boosterName = b.boosterName
 and a.setCode = b.setCode;
 
-/* Total probability of a card in any sheet in any index of a booster name */
-drop table setBoosterCardProbability;
+/* P(card(uuid) in booster(name, set)) */
+drop table if exists setBoosterCardProbability;
 create table setBoosterCardProbability as
 select a.boosterName,
   a.setCode,
   a.cardUuid,
-  sum(a.cardProbability * b.boosterProbability) as cardProbability
+  sum(a.cardProbability * b.contentProbability) as cardProbability
 from setBoosterContentCardProbability a
 join setBoosterContentProbability b
-on a.boosterName = b.boosterName
+on a.boosterIndex = b.boosterIndex
+and a.boosterName = b.boosterName
 and a.setCode = b.setCode
 group by a.boosterName, a.setCode, a.cardUuid;
