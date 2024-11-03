@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
-from flask import Flask, render_template, request, redirect
+from flask import Flask, stream_template, request, redirect
+from . import decklist
 
 app = Flask(__name__)
 
@@ -9,12 +10,13 @@ def get_recs(decklist):
 
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return stream_template("index.html")
 
 @app.post("/")
 def process():
-    if request.files["decklistFile"].content_length > 0:
-        recs = get_recs(request.files["decklistFile"].read())
-    else:
-        recs = get_recs(request.form["decklist"])
-    return redirect('/')
+    card_list = request.files["decklistFile"].read().decode('utf-8')
+    if len(card_list) == 0:
+        card_list = request.form["decklist"]
+    cards = card_list.split('\n')
+    boosters = decklist.parse(cards, 'ignoreLands' in request.form)
+    return stream_template("index.html", boosters=boosters)

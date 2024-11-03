@@ -44,7 +44,14 @@
             </div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
-        <result id="results"></result>
+        <result id="results">
+            {% for set in boosters %}
+                <h5>{{ set }}</h5>
+                {% for card in boosters[set] %}
+                    <p>{{ card }} {{ (boosters[set][card] * 100) | round(4) }}%</p>
+                {% endfor %}
+            {% endfor %}
+        </result>
     </main>
     <!-- Bootstrap JS -->
     <script
